@@ -1,0 +1,163 @@
+@page "/users"
+@using CyberForgeMS.Data;
+@using CyberForgeMS.Data.Utilizadores;
+@inject IUtilizadoresDAO _db;
+
+<PageTitle>Utilizadores</PageTitle>
+
+<h1>Inserir novos utilizadores</h1>
+
+<EditForm Model="@novoUtilizador" OnValidSubmit="@InsertUtilizador">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText  id="Nome" @bind-Value="@novoUtilizador.Nome"/>
+    <InputText  id="Email" @bind-Value="@novoUtilizador.Email"/>
+    <InputText  id="Contacto" @bind-Value="@novoUtilizador.Contacto"/>
+    <InputText  id="Password" @bind-Value="@novoUtilizador.Password"/>
+    <InputDate  id="Nascimento" @bind-Value="@novoUtilizador.Nascimento"/>
+    <InputText  id="Morada" @bind-Value="@novoUtilizador.Morada"/>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+
+</EditForm>
+
+
+<h1>Utilizadores no sistema</h1>
+
+@if (users == null){
+    <p>Estas falido, arranja melhor</p>
+} else {
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Contacto</th>
+                <th>Password</th>
+                <th>Nascimento</th>
+                <th>Morada</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var u in users){
+                <tr>
+                    <td>@u.Id</td>
+                    <td>@u.Nome</td>
+                    <td>@u.Email</td>
+                    <td>@u.Contacto</td>
+                    <td>@u.Password</td>
+                    <td>@u.Nascimento</td>
+                    <td>@u.Morada</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h1>Inserir novos funcionarios</h1>
+
+<EditForm Model="@novoFuncionario" OnValidSubmit="@InsertFuncionario">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText  id="NomeF" @bind-Value="@novoFuncionario.Nome"/>
+    <InputText  id="EmailF" @bind-Value="@novoFuncionario.Email"/>
+    <InputText  id="ContactoF" @bind-Value="@novoFuncionario.Contacto"/>
+    <InputText  id="PasswordF" @bind-Value="@novoFuncionario.Password"/>
+    <InputDate  id="NascimentoF" @bind-Value="@novoFuncionario.Nascimento"/>
+    <InputText  id="MoradaF" @bind-Value="@novoFuncionario.Morada"/>
+    <InputNumber id="NIFF" @bind-Value="@novoFuncionario.NIF"/>
+    <InputNumber id="IdLinha" @bind-Value="@novoFuncionario.IdLinha"/>
+
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+
+</EditForm>
+
+<h1>funcionarios no sistema</h1>
+
+@if (funcionarios == null){
+    <p>Estas falido, arranja melhor</p>
+} else {
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Contacto</th>
+                <th>Password</th>
+                <th>Nascimento</th>
+                <th>Morada</th>
+                <th>NIF</th>
+                <th>idLinha</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var u in funcionarios){
+                <tr>
+                    <td>@u.Id</td>
+                    <td>@u.Nome</td>
+                    <td>@u.Email</td>
+                    <td>@u.Contacto</td>
+                    <td>@u.Password</td>
+                    <td>@u.Nascimento</td>
+                    <td>@u.Morada</td>
+                    <td>@u.NIF</td>
+                    <td>@u.IdLinha</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code{
+
+    // PersonModel = UserDAO
+    private List<UtilizadorModel> users;
+    private List<Funcionario> funcionarios;
+    
+    private UtilizadorModel novoUtilizador = new UtilizadorModel();
+
+    private Funcionario novoFuncionario = new Funcionario();
+
+    protected override async Task OnInitializedAsync(){
+        users = await _db.GetUtilizadores();
+        funcionarios = await _db.GetFuncionarios();
+    }
+
+    private async Task InsertUtilizador(){
+        UtilizadorModel utilizadorModel = new UtilizadorModel{
+            Nome = novoUtilizador.Nome,
+            Email = novoUtilizador.Email,
+            Contacto = novoUtilizador.Contacto,
+            Password = novoUtilizador.Password,
+            Nascimento = novoUtilizador.Nascimento,
+            Morada = novoUtilizador.Morada
+        };
+
+        await _db.InsertUtilizador(utilizadorModel);
+
+        users.Add(utilizadorModel);
+
+        novoUtilizador = new UtilizadorModel();
+    }
+    private async Task InsertFuncionario(){
+
+        await _db.InsertFuncionario(novoFuncionario);
+
+        funcionarios.Add(novoFuncionario);
+
+        users = await _db.GetUtilizadores();
+
+        novoFuncionario = new Funcionario();
+    }
+
+    private async Task GetFuncionarios(){
+        funcionarios = await _db.GetFuncionarios();
+        users = await _db.GetUtilizadores();
+    }
+}

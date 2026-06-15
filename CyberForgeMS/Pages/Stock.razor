@@ -1,0 +1,410 @@
+@page "/stock"
+@using CyberForgeMS.Data.Stock;
+@using CyberForgeMS.Business.Stock;
+@inject IStockDAO _db;
+@inject IComponenteDAO c_db;
+
+<PageTitle>Stock</PageTitle>
+@if(userState.Role == String.Empty || userState.Role == "Cliente"){
+    
+} else {
+    @if(userState.Role == "Admin"){
+        @if(idsStock != null && stockModel == null){
+           <div class="container mx-auto my-5">
+                <!-- Page Header -->
+                <div class="text-center mb-4">
+                    <h1 class="text-primary">Stocks da Fábrica</h1>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto rounded shadow-lg">
+                    <table class="table table-striped table-bordered text-center">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Seleção</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var u in idsStock){
+                                <tr>
+                                    <td class="align-middle">@u</td>
+                                    <td class="align-middle">
+                                        <button class="btn btn-success rounded-3 px-3 py-2" @onclick="() => GetStock(u)">Selecionar</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        } 
+    }
+    @if (stockModel != null){
+        @if (userState.Role == "Admin")
+        {
+            <div class="flex justify-between items-center mb-4">
+                <button class="btn bg-success text-white hover:bg-success px-3 py-1 rounded-md" @onclick="Return">Voltar</button>
+            </div>
+        }
+        <div class="row mx-auto">
+            <div class="col-6">
+                <div class="mx-auto">
+                    <h3>Componentes</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2">ID</th>
+                                <th class="border border-gray-300 px-4 py-2">Designacao</th>
+                                <th class="border border-gray-300 px-4 py-2">Tipo</th>
+                                <th class="border border-gray-300 px-4 py-2">Tempo de Montagem</th>
+                                <th class="border border-gray-300 px-4 py-2">Preço</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (componentes != null)
+                            {
+                                @foreach (Componente componente in componentes)
+                                {
+                                    <tr class="hover:bg-gray-100">
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@componente.Id</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@componente.Designacao</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@componente.Tipo</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@componente.TempoMontagem</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@componente.PrecoVenda</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500 py-4">Sem componentes.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="mx-auto">
+                    <h3>Fornecedores</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2">ID</th>
+                                <th class="border border-gray-300 px-4 py-2">Contacto</th>
+                                <th class="border border-gray-300 px-4 py-2">Email</th>
+                                <th class="border border-gray-300 px-4 py-2">Morada</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (fornecedores != null)
+                            {
+                                @foreach (Fornecedor fornecedor in fornecedores)
+                                {
+                                    <tr class="hover:bg-gray-100">
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@fornecedor.Id</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@fornecedor.Contacto</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@fornecedor.Email</td>
+                                        <td class="border border-gray-300 px-4 py-2 text-center">@fornecedor.Morada</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500 py-4">Sem fornecedores.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="row mx-auto mt-3">
+            <div class="col-6 mt-5">
+                <div class="container mx-auto">
+                    <h3 class="text-2xl font-bold text-gray-700 mb-6">
+                        Stock Nr. @stockModel.Id
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2">Componente</th>
+                                <th class="border border-gray-300 px-4 py-2">Fornecedor</th>
+                                <th class="border border-gray-300 px-4 py-2">Quantidade</th>
+                                <th class="border border-gray-300 px-4 py-2">Preco de compra</th>
+                                <th class="border border-gray-300 px-4 py-2">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (stockModel.componentes != null)
+                            {
+                                @foreach (KeyValuePair<int, List<ComponenteFornecedor>> u in stockModel.componentes)
+                                {
+                                    @foreach (ComponenteFornecedor c in u.Value)
+                                    {
+                                        <tr class="hover:bg-gray-100">
+                                            <td class="border border-gray-300 px-4 py-2 text-center">@c.IdComponente</td>
+                                            <td class="border border-gray-300 px-4 py-2 text-center">@c.IdFornecedor</td>
+                                            <td class="border border-gray-300 px-4 py-2 text-center">@c.Quantidade</td>
+                                            <td class="border border-gray-300 px-4 py-2 text-center">@c.PrecoCompra</td>
+                                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                                <div class="flex gap-2 justify-center">
+                                                    <button class="btn bg-success text-white hover:bg-success px-3 py-1 rounded-md" 
+                                                            @onclick="() => Supply(1, c)">
+                                                        Comprar
+                                                    </button>
+                                                    <button class="btn bg-danger text-white hover:bg-danger px-3 py-1 rounded-md" 
+                                                            @onclick="() => Consume(1, c)">
+                                                        Consumir
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500 py-4">No components found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if(modal == false){
+                        <div class="d-flex justify-content-center mt-4">
+                            <button class="btn btn-success" @onclick="DisplayStockAdd">Adicionar ao Stock</button>
+                        </div>
+                    } else {
+                        <div class="d-flex justify-content-center mt-4">
+                            <button class="btn btn-success" @onclick="HideStockAdd">Registar no sistema</button>
+                        </div>
+                    }
+
+                </div>
+            </div>
+            @if(modal == false){
+                <div class="col-3">
+                    <div class="d-flex justify-content-center align-items-center m-5" style="height:40vh">
+                        <div class="card shadow-lg rounded-4 p-4" style="width: 400px; max-width: 90%;">
+                            <div class="card-body">
+                                <!-- Header Section -->
+                                <div class="d-flex justify-content-center mb-4">
+                                    <h1 class="text-primary text-center">Componente</h1>
+                                </div>
+
+                                <!-- Form Section -->
+                                <EditForm Model="@novoComponente" OnValidSubmit="@InsertComponente">
+                                    <DataAnnotationsValidator />
+                                    <ValidationSummary />
+
+                                    <!-- Input fields -->
+                                    <div class="mb-3">
+                                        <InputText class="form-control rounded-5" placeholder="Designacao" id="Designacao" @bind-Value="@novoComponente.Designacao" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <InputText class="form-control rounded-5" placeholder="Tipo" id="Tipo" @bind-Value="@novoComponente.Tipo" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <InputNumber class="form-control rounded-5" placeholder="TempoMontagem" id="TempoMontagem" @bind-Value="@novoComponente.TempoMontagem" />
+                                    </div>
+                                    <div class="mb-4">
+                                        <InputNumber class="form-control rounded-5" placeholder="PrecoVenda" id="PrecoVenda" @bind-Value="@novoComponente.PrecoVenda" />
+                                    </div>
+
+                                    <!-- Centered button -->
+                                    <div class="d-flex justify-content-center">
+                                        <button type="submit" class="btn btn-success rounded-5 px-4">Registar</button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-3">
+                    <div class="d-flex justify-content-center align-items-center m-5" style="height:40vh">
+                            <div class="card shadow-lg rounded-4 p-4" style="width: 400px; max-width: 90%;">
+                                <div class="card-body">
+                                    <!-- Header Section -->
+                                    <div class="d-flex justify-content-center mb-4">
+                                        <h1 class="text-primary text-center">Fornecedor</h1>
+                                    </div>
+
+                                    <!-- Form Section -->
+                                    <EditForm Model="@novoFornecedor" OnValidSubmit="@InsertFornecedor">
+                                        <DataAnnotationsValidator />
+                                        <ValidationSummary />
+
+                                        <!-- Input fields -->
+                                        <div class="mb-3">
+                                            <InputText class="form-control rounded-5" placeholder="Id" id="Id" @bind-Value="@novoFornecedor.Id" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <InputText class="form-control rounded-5" placeholder="Contacto" id="Contacto" @bind-Value="@novoFornecedor.Contacto" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <InputText class="form-control rounded-5" placeholder="Email" id="Email" @bind-Value="@novoFornecedor.Email" />
+                                        </div>
+                                        <div class="mb-4">
+                                            <InputText class="form-control rounded-5" placeholder="Morada" id="Morada" @bind-Value="@novoFornecedor.Morada" />
+                                        </div>
+
+                                        <!-- Centered button -->
+                                        <div class="d-flex justify-content-center">
+                                            <button type="submit" class="btn btn-success rounded-5 px-4">Registar</button>
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
+                    </div>
+
+                </div>
+            } else {
+                <div class="col-6">
+                    <div class="d-flex justify-content-center align-items-center m-5" style="height:40vh">
+                            <div class="card shadow-lg rounded-4 p-4" style="width: 400px; max-width: 90%;">
+                                <div class="card-body">
+                                    <!-- Header Section -->
+                                    <div class="d-flex justify-content-center mb-4">
+                                        <h3 class="text-primary text-center">Adicionar ao Stock</h3>
+                                    </div>
+
+                                    <!-- Form Section -->
+                                    <EditForm Model="@novoComponenteFornecedor" OnValidSubmit="@InsertOnStock">
+                                        <DataAnnotationsValidator />
+                                        <ValidationSummary />
+
+                                        <!-- Input fields -->
+                                        <div class="mb-3">
+                                            <span>IdComponente</span>
+                                            <InputNumber class="form-control rounded-5" placeholder="IdComponente" id="IdComponente" @bind-Value="@novoComponenteFornecedor.IdComponente" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <InputText class="form-control rounded-5" placeholder="IdFornecedor" id="IdFornecedor" @bind-Value="@novoComponenteFornecedor.IdFornecedor" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <span>Quantidade</span>
+                                            <InputNumber class="form-control rounded-5" placeholder="Quantidade" id="Quantidade" @bind-Value="@novoComponenteFornecedor.Quantidade" />
+                                        </div>
+                                        <div class="mb-4">
+                                            <span>Preço de Compra</span>
+                                            <InputNumber class="form-control rounded-5" placeholder="PrecoCompra" id="PrecoCompra" @bind-Value="@novoComponenteFornecedor.PrecoCompra" />
+                                        </div>
+
+                                        <!-- Centered button -->
+                                        <div class="d-flex justify-content-center">
+                                            <button type="submit" class="btn btn-success rounded-5 px-4">Registar</button>
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+}
+
+
+@code{
+
+    private StockModel? stockModel;
+
+    private bool modal = false;
+
+    private List<int>? idsStock;
+    
+    private Componente novoComponente = new Componente();
+
+    private ComponenteFornecedor novoComponenteFornecedor = new ComponenteFornecedor();
+
+    private Fornecedor novoFornecedor = new Fornecedor();
+    private List<Componente>? componentes;
+    private List<Fornecedor>? fornecedores;
+
+    protected override async Task OnInitializedAsync(){
+
+        if(userState.Role == "Admin"){
+
+            if(idsStock == null || !idsStock.Any()){
+                idsStock = await _db.GetStockIds();
+                stockModel = null;
+            }
+
+        }
+
+        if(userState.Role == "Funcionario"){
+            stockModel = await _db.GetStockById(userState.IdLinha);
+        }
+
+        componentes = await c_db.GetAllComponentes();
+        fornecedores = await c_db.GetFornecedores();
+    }
+
+    private void DisplayStockAdd(){
+        modal = true;
+    }
+
+    private void HideStockAdd(){
+        modal = false;
+    }
+
+    private void Return(){
+        stockModel = null;
+    }
+
+    private async Task GetStock(int id){
+        stockModel = await _db.GetStockById(id);
+    }
+
+    private async Task GetForncedores(){
+        fornecedores = await c_db.GetFornecedores();
+    }
+
+    private async Task GetComponentes(){
+        componentes = await c_db.GetAllComponentes();
+    }
+
+    private async Task Supply(int quantidade,ComponenteFornecedor componente){
+        await _db.SupplyComponente(stockModel,componente,quantidade);
+        stockModel = await _db.GetStockById(stockModel.Id);
+    }
+    private async Task Consume(int quantidade,ComponenteFornecedor componente){
+        await _db.ConsumeComponente(stockModel,componente,quantidade);
+        stockModel = await _db.GetStockById(stockModel.Id);
+    }
+    
+    private async Task InsertComponente(){
+        await c_db.PutComponente(novoComponente);
+
+        componentes = await c_db.GetAllComponentes();
+        
+        novoComponente = new Componente();
+
+    }
+
+    private async Task InsertFornecedor(){
+        await c_db.PutFornecedor(novoFornecedor);
+
+        fornecedores.Add(novoFornecedor);
+
+        novoFornecedor = new Fornecedor();
+    }
+
+    private async Task InsertOnStock(){
+        await _db.InsertOnStock(stockModel.Id,novoComponenteFornecedor);
+
+        stockModel = await _db.GetStockById(stockModel.Id);
+    }
+}

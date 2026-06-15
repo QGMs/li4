@@ -1,0 +1,157 @@
+@page "/linha"
+@using CyberForgeMS.Data.Encomendas
+@using CyberForgeMS.Business.LinhaMontagem
+@using CyberForgeMS.Business.Encomendas
+@using CyberForgeMS.Business
+@inject IEncomendasDAO _db
+@inject IProdutosDAO p_db
+
+<div class="row mx-auto mt-5">
+    <div class="col-6">
+        <div class="d-flex justify-content-center align-items-center m-5" style="height:40vh">
+            <div class="card shadow-lg rounded-4 p-4" style="width: 700px; max-width: 90%;">
+                <div class="card-body">
+                    <!-- Header Section -->
+                    <div class="d-flex justify-content-center mb-4">
+                        <h3 class="text-primary text-center">Encomendas</h3>
+                    </div>
+                    <!-- Added a div with fixed height and overflow-y-auto -->
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        <div class="overflow-x-auto rounded shadow-lg">
+                            <table class="table table-striped table-bordered text-center">
+                                <thead class="bg-primary text-white sticky-top">
+                                    <tr>
+                                        <th class="p-3">ID</th>
+                                        <th class="p-3">Utilizador</th>
+                                        <th class="p-3">Tempo de montagem</th>
+                                        <th class="p-3">Preço venda</th>
+                                        <th class="p-3">Seleção</th>
+                                        <th class="p-3">Apagar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach(Encomenda u in encomendas){
+                                        <tr>
+                                            <td class="align-middle">@u.Id</td>
+                                            <td class="align-middle">@u.IdUtilizador</td>
+                                            <td class="align-middle">@u.TempoTotal</td>
+                                            <td class="align-middle">@u.PrecoVenda</td>
+                                            <td class="align-middle">
+                                                <button class="btn btn-success rounded-3 px-3 py-2" @onclick="() => Select(u)">Selecionar</button>
+                                            </td>
+                                            <td class="align-middle">
+                                                <button class="btn btn-danger rounded-3 px-3 py-2" @onclick="() => Delete(u.Id)">Apagar</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="d-flex justify-content-center" style="height:60vh">
+            <div class="card shadow-lg rounded-4 p-4" style="width: 600px; max-width: 90%;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-center mb-4">
+                        <h3 class="text-primary text-center">Montagem</h3>
+                    </div>
+                    @if(aSerFeita != null){
+                        <!-- Image container -->
+                        <div class="d-flex justify-content-center mb-3">
+                            <img src="@Modal.CurrentImage" alt="Montagem Step" 
+                                class="img-fluid rounded" style="max-height: 400px; object-fit: contain;">
+                        </div>
+                        
+                        
+                        <!-- Step indicator -->
+                        <div class="text-center mt-2">
+                            Step @(Modal.CurrentIndex + 1) of @Modal.TotalImages
+                        </div>
+                        <div class="clearfix">
+                            <button class="btn btn-success float-end" @onclick="NextImage">Seguinte</button>
+                        </div>
+                    } else {
+
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code{
+
+
+
+    private List<Encomenda> encomendas = new();
+
+    Estado estado = new();
+
+    Encomenda? aSerFeita = null;
+
+    int max = 0;
+
+    int counter = 0;
+    
+    MontagemModel Modal = new();
+
+    protected override async Task OnInitializedAsync(){
+        encomendas = await _db.GetEncomendasPorFazer();
+        Modal.OnGet();
+    }
+
+    private void Select(Encomenda c){
+        aSerFeita = c;
+        counter = 0;
+        max = 0;
+        foreach(KeyValuePair<Produto,int> k in aSerFeita.Produtos){
+            max += k.Value;
+        }
+    }
+
+    private async Task Delete(int idEncomenda){
+        await _db.DeleteEncomenda(idEncomenda);
+        encomendas = await _db.GetEncomendasPorFazer();
+    }
+
+    private async void Done(){
+        if(aSerFeita != null) await _db.Done(aSerFeita.Id);
+
+        encomendas = await _db.GetEncomendasPorFazer();
+
+        aSerFeita = null;
+        counter = 0;
+        max = 0;
+        StateHasChanged();
+    }
+    
+    private void NextImage()
+    {
+        Modal.CurrentIndex = (Modal.CurrentIndex + 1) % Modal.Images.Count;
+        Modal.CurrentImage = Modal.Images[Modal.CurrentIndex];
+        if(aSerFeita != null){
+            if(Modal.CurrentIndex == 0){
+                if(counter >= max - 1){
+                    Done();
+                    StateHasChanged();
+                } else {
+                    counter++;
+                    Console.WriteLine(counter);
+                    Console.WriteLine(max);
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void PreviousImage()
+    {
+        Modal.CurrentIndex = (Modal.CurrentIndex - 1 + Modal.Images.Count) % Modal.Images.Count;
+        StateHasChanged();
+    }
+}

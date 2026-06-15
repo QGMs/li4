@@ -1,0 +1,69 @@
+@page "/"
+@using CyberForgeMS.Data.Utilizadores
+@using CyberForgeMS.Business
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+@inject IUtilizadoresDAO _db
+
+
+<div class="d-flex justify-content-center align-items-center" style="height:80vh">
+    <div class="card shadow-lg rounded-4 p-4" style="width: 400px; max-width: 90%;">
+        <div class="card-body align-content-center">
+            <div class="d-flex justify-content-center mb-4">
+                <h3 class="text-primary">Login</h3>
+            </div>
+            <EditForm Model="loginModel" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="form-floating mb-3">
+                    <InputText placeholder="Email" id="email" type="text" class="form-control rounded-3" @bind-Value="loginModel.Username" />
+                    <label for="email">Email</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <InputText placeholder="Password" id="password" type="password" class="form-control rounded-3" @bind-Value="loginModel.Password" />
+                    <label for="password">Password</label>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-3">Login</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new LoginModel();
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            (userState.User,userState.Role) = await _db.ValidateUser(loginModel.Username,loginModel.Password);
+            // Replace with your actual login logic 
+            if (userState.Role != String.Empty)
+            {
+                userState.SetState(userState.User,userState.Role);
+                if(userState.Role == "Funcionario" && userState.User != null) userState.IdLinha = await _db.GetIdLinhaFuncionario(userState.User.Id);
+                Navigation.NavigateTo("/carrinho");
+            }
+            else
+            {
+                throw new Exception("Invalid credentials.");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Login failed : " + ex);
+        }
+    }
+
+    private class LoginModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}    

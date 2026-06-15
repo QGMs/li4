@@ -1,0 +1,236 @@
+@page "/carrinho"
+@using CyberForgeMS.Business.Encomendas
+@using CyberForgeMS.Business.Stock
+@using CyberForgeMS.Data.Encomendas
+@using CyberForgeMS.Data.Stock
+@inject CyberForgeMS.Business.Encomendas.Carrinho CarrinhoService
+@inject IProdutosDAO p_db
+@inject IComponenteDAO c_db
+@inject IEncomendasDAO e_db
+
+<h1 class="text-primary text-center my-4">Produtos</h1>
+
+<div class="row">
+    <!-- Left Side: Product Grid -->
+    <div class="col-md-6">
+        <div class="row g-3">
+            @foreach (var produto in PaginatedProducts.Take(6))
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@produto.Nome</h5>
+                            <p class="card-text">
+                                <strong>Preço:</strong> @produto.Nome €<br>
+                                <strong>Custo:</strong> @produto.PrecoVenda €<br>
+                                <strong>Tempo de Montagem:</strong> @produto.TempoMontagem minutes<br>
+                                <strong>Componentes:</strong>
+                                <ul>
+                                @if (produto.Componentes != null)
+                                {
+                                    @foreach (var c in produto.Componentes)
+                                    {
+                                        var componente = componentes[produto.Id]
+                                            .FirstOrDefault(comp => comp.Id == c.IdComponente);
+                                        if (componente != null)
+                                        {
+                                            <li>@componente.Designacao - @c.Quantidade</li>
+                                        }
+                                    }
+                                }
+                            </ul>
+                            </p>
+                            <button class="btn btn-primary w-100" @onclick="() => AddToCart(produto)">Adicionar ao carrinho</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination Controls -->
+        <nav aria-label="Product pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="PreviousPage">Anterior</button>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Página @CurrentPage de @TotalPages</span>
+                </li>
+                <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="NextPage">Próximo</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Right Side: Cart Table -->
+    <div class="col-md-6">
+        <h2 class="text-center text-primary">Carrinho</h2>
+        @if (CarrinhoService.Produtos == null || !CarrinhoService.Produtos.Any())
+        {
+            <p class="text-center">Carrinho vazio.</p>
+        }
+        else
+        {
+            <table class="table table-hover mt-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in CarrinhoService.Produtos)
+                    {
+                        <tr>
+                            <td>@item.Key.Nome</td>
+                            <td>@item.Value</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" @onclick="() => RemoveFromCart(item.Key)">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <div class="container w-50 mx-auto my-5">
+            <!-- Page Header -->
+            <div class="text-center mb-4">
+                <h1 class="text-primary">Linha para enviar</h1>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto rounded shadow-lg">
+                <table class="table table-striped table-bordered text-center">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Seleção</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var u in linhasMontagem){
+                            <tr>
+                                <td class="align-middle">@u</td>
+                                @if(u == idLinha){
+                                    <td class="align-middle">
+                                        <button class="btn btn-danger rounded-3 px-3 py-2" @onclick="() => SelectLinha(u)">Selecionado</button>
+                                    </td>
+                                } else {
+                                    <td class="align-middle">
+                                        <button class="btn btn-success rounded-3 px-3 py-2" @onclick="() => SelectLinha(u)">Selecionar</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-center mt-4">
+    <button class="btn btn-success btn-sm" @onclick="SendEncomenda">Comprar</button>
+</div>
+
+
+@code {
+    private List<Produto> Produtos = new();
+    private List<Produto> PaginatedProducts = new(); // Products on the current page
+    private Dictionary<int,List<Componente>> componentes = new();
+
+    private List<int> linhasMontagem = new();
+    private int idLinha = 0;
+    private int CurrentPage = 1;
+    private int PageSize = 3;
+    protected override async Task OnInitializedAsync()
+    {
+        linhasMontagem = await p_db.GetLinhasMontagem();
+        idLinha = linhasMontagem.First();
+        Produtos = await p_db.GetAllProdutos();
+        if(Produtos != null && Produtos.Count != 0){
+            foreach(Produto produto in Produtos){
+                componentes.Add(produto.Id,new List<Componente>());
+                foreach(ComponenteProduto c in produto.Componentes){
+                    componentes[produto.Id].Add(await c_db.GetComponenteById(c.IdComponente));
+                }   
+            }
+        }
+        UpdatePaginatedProducts();
+    }
+
+    private void AddToCart(Produto produto)
+    {
+        if (CarrinhoService.Produtos == null)
+        {
+            CarrinhoService.Produtos = new Dictionary<Produto, int>();
+        }
+
+        if (CarrinhoService.Produtos.ContainsKey(produto))
+        {
+            CarrinhoService.Produtos[produto]++;
+        }
+        else
+        {
+            CarrinhoService.Produtos[produto] = 1;
+        }
+    }
+
+    private void RemoveFromCart(Produto produto)
+    {
+        if (CarrinhoService.Produtos == null || !CarrinhoService.Produtos.ContainsKey(produto)) return;
+
+        CarrinhoService.Produtos[produto]--;
+        if (CarrinhoService.Produtos[produto] <= 0)
+        {
+            CarrinhoService.Produtos.Remove(produto);
+        }
+    }
+
+    private void UpdatePaginatedProducts()
+    {
+        PaginatedProducts = Produtos
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+    }
+
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            UpdatePaginatedProducts();
+        }
+    }
+
+    private void PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            UpdatePaginatedProducts();
+        }
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)Produtos.Count / PageSize);
+
+    private void SelectLinha(int id){
+        idLinha = id; 
+    }
+
+    private async Task SendEncomenda(){
+        Encomenda order = new Encomenda();
+        order.Estado = false;
+        order.IdLinhaMontagem = idLinha;
+        if(CarrinhoService.Produtos != null && CarrinhoService.Produtos.Count != 0)
+            order.Produtos = CarrinhoService.Produtos;
+        if(userState.User != null)
+            order.IdUtilizador = userState.User.Id;
+        await e_db.PutEncomenda(order);
+        CarrinhoService.Produtos = new();
+    }
+
+}

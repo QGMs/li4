@@ -1,0 +1,16 @@
+@page "/conta"
+
+<PageTitle>Gerir conta</PageTitle>
+
+
+@if(userState.User != null){
+    <h1>Conta</h1>
+    <h2>Id : @userState.User.Id</h2>
+    <h2>Nome : @userState.User.Nome</h2>
+    <h2>Email : @userState.User.Email</h2>
+    <h2>Contacto : @userState.User.Contacto</h2>
+    <h2>Password : @userState.User.Password</h2>
+    <h2>Nascimento : @userState.User.Nascimento</h2>
+    <h2>Morada : @userState.User.Morada</h2>
+    <h2>Role : @userState.Role</h2>
+}
